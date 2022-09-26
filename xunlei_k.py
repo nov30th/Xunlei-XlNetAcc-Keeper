@@ -274,8 +274,19 @@ def update_speedup(kn_c):
         print("[Info]:"+kn_c.UpgradeBW()["message"])
 
 
-if __name__ == "__main__":
+def restart():
+    global kn_c
+    kn_c.RecoverBW()
+    time.sleep(60)
     kn_c = KuaiNiao_Client()
+    update_speedup(kn_c)
+
+
+kn_c = KuaiNiao_Client()
+print("[Info]:" + kn_c.RecoverBW()["message"])
+if __name__ == "__main__":
+    time.sleep(60)
+    # kn_c = KuaiNiao_Client()
     # print(kn_c.PingUser())
     # print(kn_c.GetWebSdkInfo())
     # print(kn_c.DownSpeedQuery())
@@ -283,8 +294,10 @@ if __name__ == "__main__":
     # print(kn_c.BandwidthInfo())
     # print(kn_c.UpgradeBW())
     update_speedup(kn_c)
-    set_interval(lambda: print("[Info]:"+kn_c.PingUser()["msg"]), 60*15)
-    set_interval(lambda: update_speedup(kn_c), 60*60*0.5)
+    set_interval(lambda: print("[Info]:" + kn_c.PingUser()["msg"]), 60 * 5)
+    # set_interval(lambda: update_speedup(kn_c), 60 * 60 * 1.1)
+    set_interval(lambda: restart(), 60 * 60 * 2.1)
+
     for t in wait_t_arr:
         t.join()
     input("Quit...")
