@@ -392,26 +392,30 @@ def update_speedup(kn_c):
 
 
 def restart():
-    global kn_c
+    global kn_c, mobile_cookies
+    mobile_cookies = login()
     kn_c.RecoverBW()
     time.sleep(60)
     kn_c = KuaiNiao_Client()
     update_speedup(kn_c)
 
 
-if __name__ == "__main__":
+def login() -> str:
     with open("./userpwd.txt", "r+", encoding="utf-8") as cf:
         user_pwd = cf.read()
         pass
     with open("./peerid.txt", "r+", encoding="utf-8") as cf:
+        global PEER_ID
         PEER_ID = cf.read()
         pass
     xunlei_login = KuaiNiao_Session()
-    mobile_cookies = xunlei_login.login_xunlei(user_pwd.split('|')[0], user_pwd.split('|')[1])
+    return xunlei_login.login_xunlei(user_pwd.split('|')[0], user_pwd.split('|')[1])
 
+
+if __name__ == "__main__":
     kn_c = KuaiNiao_Client()
-    print("[Info]:" + kn_c.RecoverBW()["message"])
     time.sleep(60)
+    restart()
     # kn_c = KuaiNiao_Client()
     # print(kn_c.PingUser())
     # print(kn_c.GetWebSdkInfo())
@@ -419,7 +423,7 @@ if __name__ == "__main__":
     # print(kn_c.UPSpeedQuery())
     # print(kn_c.BandwidthInfo())
     # print(kn_c.UpgradeBW())
-    update_speedup(kn_c)
+    # update_speedup(kn_c)
     set_interval(lambda: print("[Info]:" + kn_c.PingUser()["msg"]), 60 * 5)
     # set_interval(lambda: update_speedup(kn_c), 60 * 60 * 1.1)
     set_interval(lambda: restart(), 60 * 60 * 2.1)
