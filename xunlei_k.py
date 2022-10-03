@@ -1,14 +1,114 @@
-import requests
 import base64
+import hashlib
 import json
 import random
+import re
+import sys
 import time
 import uuid
-from urllib.parse import unquote
-from requests_toolbelt import MultipartEncoder  # pip3 install requests-toolbelt
 from threading import Timer
-import time
-import re
+from typing import Dict
+from urllib.parse import unquote
+
+import requests
+from requests_toolbelt import MultipartEncoder  # pip3 install requests-toolbelt
+
+APP_VERSION = "2.4.1.3"
+PROTOCOL_VERSION = 200
+PEER_ID = ''
+DEVICE = "SmallRice R1"
+DEVICE_MODEL = "R1"
+OS_VERSION = "5.0.1"
+OS_API_LEVEL = "24"
+OS_BUILD = "LRX22C"
+header_xl = {
+    'Content-Type': '',
+    'Connection': 'Keep-Alive',
+    'Accept-Encoding': 'gzip',
+    'User-Agent': 'android-async-http/xl-acc-sdk/version-2.1.1.177662'
+}
+mobile_cookies = {}
+device_sign = ""
+
+
+class KuaiNiao_Session:
+    def login_xunlei(self, uname, pwd):
+
+        # pwd = rsa_encode(pwd_md5)
+        fake_device_id = hashlib.md5(("msfdc%s23333" % pwd).encode('utf-8')).hexdigest()  # just generate a 32bit string
+        # sign = div.10?.device_id + md5(sha1(packageName + businessType + md5(a protocolVersion specific GUID)))
+        global device_sign
+        device_sign = "div101.%s%s" % (fake_device_id, hashlib.md5(
+            hashlib.sha1(("%scom.xunlei.vip.swjsq68c7f21687eed3cdb400ca11fc2263c998" % fake_device_id).encode('utf-8'))
+            .hexdigest().encode('utf-8')
+        ).hexdigest())
+        _payload = {
+            "protocolVersion": str(PROTOCOL_VERSION),
+            "sequenceNo": "1000001",
+            "platformVersion": "2",
+            "sdkVersion": "177662",
+            "peerID": PEER_ID,
+            "businessType": "68",
+            "clientVersion": APP_VERSION,
+            "devicesign": device_sign,
+            "isCompressed": "0",
+            # "cmdID": 1,
+            "userName": uname,
+            "passWord": pwd,
+            # "loginType": 0, # normal account
+            "sessionID": "",
+            "verifyKey": "",
+            "verifyCode": "",
+            "appName": "ANDROID-com.xunlei.vip.swjsq",
+            # "rsaKey": {
+            #    "e": "%06X" % rsa_pubexp,
+            #    "n": long2hex(rsa_mod)
+            # },
+            # "extensionList": "",
+            "deviceModel": DEVICE_MODEL,
+            "deviceName": DEVICE,
+            "OSVersion": OS_VERSION
+        }
+        ct = self.http_req('https://mobile-login.xunlei.com:443/login', body=json.dumps(_payload), headers=header_xl,
+                           encoding='utf-8')
+        self.xl_login_payload = _payload
+        dt = json.loads(ct)
+
+        self.load_xl(dt)
+        return dt
+
+    def load_xl(self, dt):
+        if 'sessionID' in dt:
+            self.xl_session = dt['sessionID']
+        if 'userID' in dt:
+            self.xl_uid = dt['userID']
+        if 'loginKey' in dt:
+            self.xl_loginkey = dt['loginKey']
+
+    def http_req(self, url, headers={}, body=None, encoding='utf-8'):
+        # req = urllib2.Request(url)
+        # for k in headers:
+        #     req.add_header(k, headers[k])
+        if sys.version.startswith('3') and isinstance(body, str):
+            body = bytes(body, encoding='ascii')
+        resp = http_client.post(url, data=body, headers=headers)
+        # resp = urllib2.urlopen(req, data=body, timeout=60)
+        return resp.text
+        # buf = resp.text
+        # # check if response is gzip encoded
+        # # if buf.startswith(b'\037\213'):
+        # #     try:
+        # #         buf = zlib.decompress(buf, 16 + zlib.MAX_WBITS)  # skip gzip headers
+        # #     except Exception as ex:
+        # #         print('Warning: malformed gzip response (%s).' % str(ex))
+        # #         # buf is unchanged
+        # # ret = buf.decode(encoding)
+        # # if sys.version.startswith('3') and isinstance(ret, bytes):
+        # #     ret = str(ret)
+        # return ret
+
+
+http_client = requests.session()
 
 
 class KuaiNiao_Client:
@@ -18,20 +118,21 @@ class KuaiNiao_Client:
         self._time_int = lambda: int(time.time())
         self._random_uuid4 = lambda: str(uuid.uuid4())
         self._random_int = lambda: random.randint(10000000, 99999999)
-        self._getRealIP = lambda iptext:  re.findall(
+        self._getRealIP = lambda iptext: re.findall(
             r"\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b", iptext)[0]
         # InitData
         self._status = -1  # -1 未初始化
         self._default_header = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36",
         }
-        self._httpclient = requests.session()
+        self._httpclient = http_client  # requests.session()
         self._sdkInfo = self.GetWebSdkInfo()
         self._peerid = ""
         self._sequence = ""
-        self.getCookies()
+        # self.getCookies()
+        self.getCookies2(mobile_cookies)
         if self._peerid == "":
-            self._peerid = self._cookies["kn-speed-peer-id"]
+            self._peerid = PEER_ID  # self._cookies["kn-speed-peer-id"]
         if self._sequence == "":
             self._sequence = self._random_int()
         self._dsq = self.DownSpeedQuery()
@@ -53,8 +154,9 @@ class KuaiNiao_Client:
                 dsq["sp_name"], dsq["province_name"], dsq["interface_ip"],
                 bwq["dial_account"], bool(bwq["can_upgrade"]),
                 str(bwq["bandwidth"]["downstream"] /
-                    1024), str(bwq["max_bandwidth"]["downstream"]/1024)
+                    1024), str(bwq["max_bandwidth"]["downstream"] / 1024)
             ))
+
     # 初始化账户Cookies
 
     def getCookies(self):
@@ -67,13 +169,26 @@ class KuaiNiao_Client:
         self._cookies = cookies
         return cookies
 
+    def getCookies2(self, cookies: Dict[str, str]):
+        new_cookies: Dict[str, str] = {}
+        for k, v in cookies.items():
+            if k.lower() == "viplist":
+                continue
+            if k.lower() == "nickname":
+                new_cookies["usernick"] = v
+            new_cookies[k.lower()] = str(v)
+        requests.utils.add_dict_to_cookiejar(self._httpclient.cookies, new_cookies)
+        self._cookies = new_cookies
+        return cookies
+
     def GetWebSdkInfo(self):
         params = {
             "ctype": "websdk",
             "ckey": "rules",
             "format": "json"
         }
-        return self._httpclient.get("https://xluser-ssl.xunlei.com/config/v1/PubGetOne", params=params, headers=self._default_header).json()
+        return self._httpclient.get("https://xluser-ssl.xunlei.com/config/v1/PubGetOne", params=params,
+                                    headers=self._default_header).json()
 
     # 用户心跳包
     def PingUser(self):
@@ -90,7 +205,7 @@ class KuaiNiao_Client:
             "sdkVersion": self._sdkInfo['data']["defaultVersion"],
             "clientVersion": "NONE",
             "protocolVersion": "300",
-            "devicesign": self._cookies["deviceid"],
+            "devicesign": device_sign,
             "platformVersion": "1",
             "fromPlatformVersion": "1",
             "format": "cookie",
@@ -124,9 +239,9 @@ class KuaiNiao_Client:
                     r["msg"] = "用户离线."
                     return r
                 except:
-                    return {"status": "UnkownError", "msg": "异常错误:"+result.text}
+                    return {"status": "UnkownError", "msg": "异常错误:" + result.text}
         else:
-            return {"status": "UnkownError", "msg": "异常错误:"+result.text}
+            return {"status": "UnkownError", "msg": "异常错误:" + result.text}
 
     def DownSpeedQuery(self):
         params = {
@@ -163,7 +278,8 @@ class KuaiNiao_Client:
             "client_version": "2.0.0",
             "_": self._time_int()
         }
-        return self._httpclient.get("https://upspeed-swjsq-ssl.xunlei.com/queryportal", params=params, headers=self._default_header).json()
+        return self._httpclient.get("https://upspeed-swjsq-ssl.xunlei.com/queryportal", params=params,
+                                    headers=self._default_header).json()
 
     def BandwidthInfo(self):
         downspeedquery = self._dsq
@@ -176,13 +292,13 @@ class KuaiNiao_Client:
             "sessionid": self._cookies["sessionid"],
             "userid": self._cookies["userid"],
             "client_type": "kn-speed",
-            "client_version":  "2.0.0",
+            "client_version": "2.0.0",
             "_": self._time_int()
         }
         result = self._httpclient.get(
             "https://xlkn-ssl.xunlei.com/bandwidth", params=params, headers=self._default_header).json()
         if result["errno"] != 0:
-            print("[Error]:"+result["richmessage"])
+            print("[Error]:" + result["richmessage"])
         return result
 
     def GetNoLoginBandwidthInfo(self):
@@ -196,7 +312,7 @@ class KuaiNiao_Client:
             "sessionid": "",
             "userid": "",
             "client_type": "kn-speed",
-            "client_version":  "2.0.0",
+            "client_version": "2.0.0",
             "_": self._time_int()
         }
         result = requests.get("https://xlkn-ssl.xunlei.com/bandwidth",
@@ -219,7 +335,7 @@ class KuaiNiao_Client:
             "sessionid": self._cookies["sessionid"],
             "userid": self._cookies["userid"],
             "client_type": "kn-speed",
-            "client_version":  "2.0.0",
+            "client_version": "2.0.0",
             "_": self._time_int()
         }
         result = self._httpclient.get(
@@ -242,7 +358,7 @@ class KuaiNiao_Client:
             "sessionid": self._cookies["sessionid"],
             "userid": self._cookies["userid"],
             "client_type": "kn-speed",
-            "client_version":  "2.0.0",
+            "client_version": "2.0.0",
             "_": self._time_int()
         }
         result = self._httpclient.get(
@@ -259,6 +375,7 @@ def set_interval(func, sec):
     def func_wrapper():
         set_interval(func, sec)
         func()
+
     t = Timer(sec, func_wrapper)
     t.start()
     wait_t_arr.append(t)
@@ -271,7 +388,7 @@ def update_speedup(kn_c):
     if bwg_info["errno"] == 6020:
         print(bwg_info["message"])
     else:
-        print("[Info]:"+kn_c.UpgradeBW()["message"])
+        print("[Info]:" + kn_c.UpgradeBW()["message"])
 
 
 def restart():
@@ -282,9 +399,18 @@ def restart():
     update_speedup(kn_c)
 
 
-kn_c = KuaiNiao_Client()
-print("[Info]:" + kn_c.RecoverBW()["message"])
 if __name__ == "__main__":
+    with open("./userpwd.txt", "r+", encoding="utf-8") as cf:
+        user_pwd = cf.read()
+        pass
+    with open("./peerid.txt", "r+", encoding="utf-8") as cf:
+        PEER_ID = cf.read()
+        pass
+    xunlei_login = KuaiNiao_Session()
+    mobile_cookies = xunlei_login.login_xunlei(user_pwd.split('|')[0], user_pwd.split('|')[1])
+
+    kn_c = KuaiNiao_Client()
+    print("[Info]:" + kn_c.RecoverBW()["message"])
     time.sleep(60)
     # kn_c = KuaiNiao_Client()
     # print(kn_c.PingUser())
