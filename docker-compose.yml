@@ -1,0 +1,6 @@
+version: '3'
+services:
+
+  web:
+    image: nov30th/xunlei_1sec_niao:v1
+    environment:

@@ -1,6 +1,7 @@
 import base64
 import hashlib
 import json
+import os
 import random
 import re
 import sys
@@ -16,6 +17,7 @@ from requests_toolbelt import MultipartEncoder  # pip3 install requests-toolbelt
 APP_VERSION = "2.4.1.3"
 PROTOCOL_VERSION = 200
 PEER_ID = ''
+USER_PWD = ''
 DEVICE = "SmallRice R1"
 DEVICE_MODEL = "R1"
 OS_VERSION = "5.0.1"
@@ -393,7 +395,7 @@ def update_speedup(kn_c):
 
 def restart():
     global kn_c, mobile_cookies
-    kn_c.RecoverBW()
+    print("[Info]:" + kn_c.RecoverBW()["message"])
     time.sleep(60)
     mobile_cookies = login()
     kn_c = KuaiNiao_Client()
@@ -401,18 +403,26 @@ def restart():
 
 
 def login() -> str:
-    with open("./userpwd.txt", "r+", encoding="utf-8") as cf:
-        user_pwd = cf.read()
-        pass
-    with open("./peerid.txt", "r+", encoding="utf-8") as cf:
-        global PEER_ID
-        PEER_ID = cf.read()
-        pass
+    # with open("data/userpwd.txt", "r+", encoding="utf-8") as cf:
+    #     user_pwd = cf.read()
+    #     pass
+    # with open("data/peerid.txt", "r+", encoding="utf-8") as cf:
+    #     global PEER_ID
+    #     PEER_ID = cf.read()
+    #     pass
     xunlei_login = KuaiNiao_Session()
-    return xunlei_login.login_xunlei(user_pwd.split('|')[0], user_pwd.split('|')[1])
+    return xunlei_login.login_xunlei(USER_PWD.split('|')[0], USER_PWD.split('|')[1])
 
 
 if __name__ == "__main__":
+    if os.getenv("PEERID") is not None:
+        PEER_ID = os.getenv("PEERID")
+    if os.getenv("USERPWD") is not None:
+        USER_PWD = os.getenv("USERPWD")
+    if PEER_ID is None or USER_PWD is None or PEER_ID == "" or USER_PWD == "":
+        print("请先设置环境变量PEERID和USERPWD")
+        exit(1)
+
     mobile_cookies = login()
     kn_c = KuaiNiao_Client()
     print("[Info]:" + kn_c.RecoverBW()["message"])
@@ -425,7 +435,7 @@ if __name__ == "__main__":
     # print(kn_c.BandwidthInfo())
     # print(kn_c.UpgradeBW())
     update_speedup(kn_c)
-    set_interval(lambda: print("[Info]:" + kn_c.PingUser()["msg"]), 60 * 5)
+    set_interval(lambda: print("[Info]:" + kn_c.PingUser()["msg"]), 60 * 15)
     # set_interval(lambda: update_speedup(kn_c), 60 * 60 * 1.1)
     set_interval(lambda: restart(), 60 * 60 * 2.1)
 
