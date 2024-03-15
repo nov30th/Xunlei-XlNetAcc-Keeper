@@ -1,4 +1,5 @@
 #!/bin/zsh
+set -e
 
 # Build the project with docker with name nov30th/xunlei_ros:v1
 docker build -t nov30th/xunlei_ros:v1 .
