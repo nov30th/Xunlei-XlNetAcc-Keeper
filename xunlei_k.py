@@ -378,7 +378,8 @@ if __name__ == "__main__":
     if PEER_ID is None or USER_PWD is None or PEER_ID == "" or USER_PWD == "":
         print("NO ENV SET OF PEERID AND USERPWD")
         exit(1)
-
+    print("will start after 30 secs...")
+    time.sleep(31)
     mobile_cookies = login()
     kn_c = KuaiNiao_Client()
     print("[Info]:" + kn_c.RecoverBW()["message"])
