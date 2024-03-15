@@ -369,8 +369,8 @@ def login() -> str:
 
 
 if __name__ == "__main__":
-    print("Xunlei 1sec niao will be Start after 30 secs...")
-    time.sleep(30)
+    # print("Xunlei 1sec niao will be Start after 30 secs...")
+    # time.sleep(30)
     if os.getenv("PEERID") is not None:
         PEER_ID = os.getenv("PEERID")
     if os.getenv("USERPWD") is not None:
@@ -382,7 +382,7 @@ if __name__ == "__main__":
     mobile_cookies = login()
     kn_c = KuaiNiao_Client()
     print("[Info]:" + kn_c.RecoverBW()["message"])
-    time.sleep(60)
+    time.sleep(31)
     # kn_c = KuaiNiao_Client()
     # print(kn_c.PingUser())
     # print(kn_c.GetWebSdkInfo())

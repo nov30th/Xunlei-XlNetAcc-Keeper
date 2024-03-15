@@ -4,3 +4,5 @@ services:
   web:
     image: nov30th/xunlei_1sec_niao:v1
     environment:
+      PEERID: 6ed0da4d-98f8-4be4-88c2-7030e5938cbb
+      USERPWD: nov30th|456123X!
