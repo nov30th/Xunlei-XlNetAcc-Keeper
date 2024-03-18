@@ -6,6 +6,4 @@ docker build -t nov30th/xunlei_ros:v1 .
 
 mkdir -p dist
 
-# export the docker image to dist/xunlei_ros_v1.tar
-docker save nov30th/xunlei_ros:v1 -o dist/xunlei_ros_v1.tar
-
+skopeo copy -f v2s2 docker-daemon:nov30th/xunlei_ros:v1 docker-archive:dist/image.tar
